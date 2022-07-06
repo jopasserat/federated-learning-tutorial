@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "hands_on_ppml_visum"
+version = "0.1.0"
+description = "Hands-on tutorial for PPML sessions at VISUM 2022"
+authors = ["Jonathan Passerat-Palmbach <j.passerat-palmbach@imperial.ac.uk>"]
+
+[tool.poetry.dependencies]
+python = "~3.10"
+torch = "1.11.0"
+torchvision = "0.12.0"
+conda-lock = "^1.0.5"
+flwr = {version = "0.19.0", extras = ["simulation"]}
+medmnist = "^2.1.0"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
