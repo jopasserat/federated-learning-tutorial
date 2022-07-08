@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 
 from fl_demo.cnn_pathmnist import Net
-import fl_demo.train_pathmnist as client_pathmnist
+import fl_demo.train_utils as client_pathmnist
 from fl_demo.dataset_utils import get_dataloader
 
 NUM_EPOCHS = 3
@@ -21,14 +21,9 @@ test_loader, _          = get_dataloader(is_train=False, batch_size=2*BATCH_SIZE
 n_channels = info['n_channels']
 n_classes = len(info['label'])
 
-
-
-# visualization
+# visualization (returns PIL image, should be displayed in Jupyter cell)
 train_loader.dataset.montage(length=1)
-# visualization
 train_loader.dataset.montage(length=20)
-
-
 
 model = Net(in_channels=n_channels, num_classes=n_classes)
 criterion = nn.CrossEntropyLoss()    
