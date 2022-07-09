@@ -5,25 +5,26 @@ import torch.optim as optim
 import torch.utils.data as data
 
 
-def train(model: nn.Module,
-          optimizer: optim.Optimizer,
-          criterion: nn.Module,
-          train_loader: data.DataLoader,
-          NUM_EPOCHS: int,
-          device: torch.device
+def train(
+    model: nn.Module,
+    optimizer: optim.Optimizer,
+    criterion: nn.Module,
+    train_loader: data.DataLoader,
+    NUM_EPOCHS: int,
+    device: torch.device,
 ) -> None:
-  for epoch in range(NUM_EPOCHS):
+    for epoch in range(NUM_EPOCHS):
 
-    model.train()
+        model.train()
 
-    for inputs, targets in tqdm(train_loader):
-      inputs, targets = inputs.to(device), targets.to(device)
+        for inputs, targets in tqdm(train_loader):
+            inputs, targets = inputs.to(device), targets.to(device)
 
-      optimizer.zero_grad()
-      outputs = model(inputs)
+            optimizer.zero_grad()
+            outputs = model(inputs)
 
-      targets = targets.squeeze().long()
-      loss = criterion(outputs, targets)
+            targets = targets.squeeze().long()
+            loss = criterion(outputs, targets)
 
-      loss.backward()
-      optimizer.step()
+            loss.backward()
+            optimizer.step()

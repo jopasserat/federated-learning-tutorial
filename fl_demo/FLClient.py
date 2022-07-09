@@ -6,7 +6,6 @@ import flwr as fl
 from flwr.common.typing import Scalar
 import torch
 import ray
-import torch
 import numpy as np
 
 from fl_demo.cnn_pathmnist import Net
@@ -18,12 +17,13 @@ from fl_demo.eval_utils import test
 # Flower client that will be spawned by Ray
 # Adapted from Pytorch quickstart example
 class SimulatedFLClient(fl.client.NumPyClient):
-    def __init__(self, 
-      cid: str, 
-      fed_dir_data: str,
-      in_channels: int,
-      num_classes: int,
-      criterion: torch.nn.Module
+    def __init__(
+        self,
+        cid: str,
+        fed_dir_data: str,
+        in_channels: int,
+        num_classes: int,
+        criterion: torch.nn.Module,
     ):
         self.cid = cid
         self.fed_dir = Path(fed_dir_data)
@@ -63,7 +63,7 @@ class SimulatedFLClient(fl.client.NumPyClient):
             is_train=True,
             batch_size=int(config["batch_size"]),
             workers=num_workers,
-            shuffle=True
+            shuffle=True,
         )
 
         # send model to device
@@ -71,12 +71,12 @@ class SimulatedFLClient(fl.client.NumPyClient):
 
         # train
         train(
-          model=self.net,
-          optimizer=self.optimizer,
-          criterion=self.criterion,
-          train_loader=trainloader,
-          NUM_EPOCHS=int(config["epochs"]),
-          device=self.device
+            model=self.net,
+            optimizer=self.optimizer,
+            criterion=self.criterion,
+            train_loader=trainloader,
+            NUM_EPOCHS=int(config["epochs"]),
+            device=self.device,
         )
 
         # return local model and statistics
@@ -90,10 +90,7 @@ class SimulatedFLClient(fl.client.NumPyClient):
         # load data for this client and get trainloader
         num_workers = len(ray.worker.get_resource_ids()["CPU"])
         valloader, _ = get_dataloader(
-          is_train=False,
-          batch_size=50,
-          workers=num_workers,
-          shuffle=False
+            is_train=False, batch_size=50, workers=num_workers, shuffle=False
         )
 
         # send model to device
@@ -101,12 +98,12 @@ class SimulatedFLClient(fl.client.NumPyClient):
 
         # evaluate
         loss, accuracy = test(
-          model=self.net,
-          criterion=self.criterion,
-          data_flag=valloader.dataset.flag,
-          eval_loader=valloader,
-          split="test",
-          device=self.device
+            model=self.net,
+            criterion=self.criterion,
+            data_flag=valloader.dataset.flag,
+            eval_loader=valloader,
+            split="test",
+            device=self.device,
         )
 
         # return statistics

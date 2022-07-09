@@ -14,7 +14,7 @@ def get_eval_fn(
     testset: torch.utils.data.Dataset,
     criterion: torch.nn.Module,
     in_channels: int,
-    num_classes: int
+    num_classes: int,
 ) -> Callable[[fl.common.Weights], Optional[Tuple[float, float]]]:
     """Return an evaluation function for centralized evaluation."""
 
@@ -30,12 +30,12 @@ def get_eval_fn(
 
         testloader = torch.utils.data.DataLoader(testset, batch_size=50)
         loss, accuracy, auc = test(
-          model=model,
-          criterion=criterion,
-          data_flag=testset.flag,
-          eval_loader=testloader,
-          split="test",
-          device=device
+            model=model,
+            criterion=criterion,
+            data_flag=testset.flag,
+            eval_loader=testloader,
+            split="test",
+            device=device,
         )
 
         # return statistics
@@ -55,40 +55,41 @@ def set_weights(model: torch.nn.ModuleList, weights: fl.common.Weights) -> None:
     model.load_state_dict(state_dict, strict=True)
 
 
-def test(model: nn.Module,
-         criterion: nn.Module,
-         data_flag: str,
-         eval_loader: data.DataLoader,
-         split: str,
-         device: torch.device
+def test(
+    model: nn.Module,
+    criterion: nn.Module,
+    data_flag: str,
+    eval_loader: data.DataLoader,
+    split: str,
+    device: torch.device,
 ) -> Tuple[float, float, float]:
-  model.eval()
-  y_true = torch.tensor([])
-  y_score = torch.tensor([])
-  loss = 0.0
+    model.eval()
+    y_true = torch.tensor([])
+    y_score = torch.tensor([])
+    loss = 0.0
 
-  with torch.no_grad():
-    for inputs, targets in eval_loader:
-      inputs, targets = inputs.to(device), targets.to(device)
-      outputs = model(inputs)
+    with torch.no_grad():
+        for inputs, targets in eval_loader:
+            inputs, targets = inputs.to(device), targets.to(device)
+            outputs = model(inputs)
 
-      targets = targets.squeeze().long()
-      loss += criterion(outputs, targets).item()
+            targets = targets.squeeze().long()
+            loss += criterion(outputs, targets).item()
 
-      outputs = outputs.softmax(dim=-1)
+            outputs = outputs.softmax(dim=-1)
 
-      targets = targets.float().resize_(len(targets), 1)
+            targets = targets.float().resize_(len(targets), 1)
 
-      y_true = torch.cat((y_true, targets), 0)
-      y_score = torch.cat((y_score, outputs), 0)
+            y_true = torch.cat((y_true, targets), 0)
+            y_score = torch.cat((y_score, outputs), 0)
 
-    y_true = y_true.numpy()
-    y_score = y_score.detach().numpy()
-    
-    evaluator = Evaluator(data_flag, split)
-    metrics = evaluator.evaluate(y_score)
+        y_true = y_true.numpy()
+        y_score = y_score.detach().numpy()
 
-    auc, acc = metrics
-    print('%s  auc: %.3f  acc:%.3f' % (split, auc, acc))
+        evaluator = Evaluator(data_flag, split)
+        metrics = evaluator.evaluate(y_score)
 
-    return loss, acc, auc
+        auc, acc = metrics
+        print("%s  auc: %.3f  acc:%.3f" % (split, auc, acc))
+
+        return loss, acc, auc

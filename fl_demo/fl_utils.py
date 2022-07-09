@@ -27,11 +27,7 @@ def get_random_id_splits(total: int, val_ratio: float, shuffle: bool = True):
 
 
 def do_fl_partitioning(
-  path_to_dataset,
-  pool_size: int,
-  alpha: float,
-  num_classes: int,
-  val_ratio=0.0
+    path_to_dataset, pool_size: int, alpha: float, num_classes: int, val_ratio=0.0
 ):
     """(non-)IID partitioning of Torchvision datasets using LDA."""
 

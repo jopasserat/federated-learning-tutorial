@@ -19,27 +19,25 @@ def get_dataset_CIFAR10(path_to_data: Path, cid: str, partition: str):
 
 
 def get_dataset(download: bool = True, split: str = "train"):
+    def get_pathmnist():
+        data_flag = "pathmnist"
+        info = INFO[data_flag]
 
-  def get_pathmnist():
-    data_flag = 'pathmnist'
-    info = INFO[data_flag]
+        DataClass = getattr(medmnist, info["python_class"])
 
-    DataClass = getattr(medmnist, info['python_class'])
+        return DataClass, info
 
-    return DataClass, info
+    # preprocessing
+    data_transform = transforms.Compose(
+        [transforms.ToTensor(), transforms.Normalize(mean=[0.5], std=[0.5])]
+    )
 
-  # preprocessing
-  data_transform = transforms.Compose([
-      transforms.ToTensor(),
-      transforms.Normalize(mean=[.5], std=[.5])
-  ])
+    DataClass, info = get_pathmnist()
 
-  DataClass, info = get_pathmnist()
+    # load the data
+    dataset = DataClass(split=split, transform=data_transform, download=download)
 
-  # load the data
-  dataset = DataClass(split=split, transform=data_transform, download=download)
-
-  return dataset, info
+    return dataset, info
 
 
 def get_dataloader_cifar10(
@@ -57,10 +55,7 @@ def get_dataloader_cifar10(
 
 # TODO might need to take CID into account for split?
 def get_dataloader(
-    is_train: bool,
-    batch_size: int,
-    workers: int,
-    shuffle: bool
+    is_train: bool, batch_size: int, workers: int, shuffle: bool
 ) -> Tuple[DataLoader, Dict]:
     """Generates trainset/valset object and returns appropiate dataloader."""
 

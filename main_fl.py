@@ -47,10 +47,10 @@ if __name__ == "__main__":
 
     ### download  dataset ###
     train_path, info = get_dataset(split="train")
-    testset, _       = get_dataset(split="test")
+    testset, _ = get_dataset(split="test")
 
-    n_classes  = len(info['label'])
-    n_channels = info['n_channels']
+    n_classes = len(info["label"])
+    n_channels = info["n_channels"]
 
     criterion = torch.nn.CrossEntropyLoss()
 
@@ -61,7 +61,11 @@ if __name__ == "__main__":
     # the base dataset lives. Inside it, there will be N=pool_size sub-directories each with # FIXME
     # its own train/set split.
     fed_dir = do_fl_partitioning(
-        train_path, pool_size=pool_size, alpha=1000, num_classes=n_classes, val_ratio=0.1
+        train_path,
+        pool_size=pool_size,
+        alpha=1000,
+        num_classes=n_classes,
+        val_ratio=0.1,
     )
 
     # configure the strategy
@@ -70,17 +74,23 @@ if __name__ == "__main__":
         min_fit_clients=2,
         min_available_clients=pool_size,  # All clients should be available
         on_fit_config_fn=fit_config,
-        eval_fn=get_eval_fn(testset, criterion=criterion, in_channels=n_channels, num_classes=n_classes),  # centralised testset evaluation of global model
+        eval_fn=get_eval_fn(
+            testset, criterion=criterion, in_channels=n_channels, num_classes=n_classes
+        ),  # centralised testset evaluation of global model
     )
 
     def client_fn(cid: str):
         # create a single client instance
-        return SimulatedFLClient(cid, fed_dir, in_channels=n_channels, num_classes=n_classes, criterion=criterion)
+        return SimulatedFLClient(
+            cid,
+            fed_dir,
+            in_channels=n_channels,
+            num_classes=n_classes,
+            criterion=criterion,
+        )
 
     # (optional) specify ray config
-    ray_config = {
-      "include_dashboard": False
-    }
+    ray_config = {"include_dashboard": False}
 
     # start simulation
     fl.simulation.start_simulation(
