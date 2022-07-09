@@ -8,8 +8,8 @@ import torch
 import ray
 import numpy as np
 
-from fl_demo.cnn_pathmnist import Net
-from fl_demo.dataset_utils import get_dataloader
+from fl_demo.cnn_pathmnist import Net, pathmnist_transforms
+from fl_demo.fl_utils import get_federated_dataloader
 from fl_demo.train_utils import train
 from fl_demo.eval_utils import test
 
@@ -24,10 +24,12 @@ class SimulatedFLClient(fl.client.NumPyClient):
         in_channels: int,
         num_classes: int,
         criterion: torch.nn.Module,
+        data_flag: str,
     ):
         self.cid = cid
         self.fed_dir = Path(fed_dir_data)
         self.properties: Dict[str, Scalar] = {"tensor_type": "numpy.ndarray"}
+        self.data_flag = data_flag
 
         # instantiate model
         self.net = Net(in_channels=in_channels, num_classes=num_classes)
@@ -57,13 +59,14 @@ class SimulatedFLClient(fl.client.NumPyClient):
 
         # load data for this client and get trainloader
         num_workers = len(ray.worker.get_resource_ids()["CPU"])
-        trainloader, _ = get_dataloader(
-            # self.fed_dir,
-            # self.cid,
+        trainloader = get_federated_dataloader(
+            base_path=self.fed_dir,
+            client_id=self.cid,
             is_train=True,
             batch_size=int(config["batch_size"]),
             workers=num_workers,
             shuffle=True,
+            transforms=pathmnist_transforms(),
         )
 
         # send model to device
@@ -88,23 +91,36 @@ class SimulatedFLClient(fl.client.NumPyClient):
         self.set_parameters(parameters)
 
         # load data for this client and get trainloader
-        num_workers = len(ray.worker.get_resource_ids()["CPU"])
-        valloader, _ = get_dataloader(
-            is_train=False, batch_size=50, workers=num_workers, shuffle=False
+        num_workers = (
+            len(ray.worker.get_resource_ids()["CPU"]) if ray.is_initialized() else 1
+        )
+
+        valloader = get_federated_dataloader(
+            base_path=self.fed_dir,
+            client_id=self.cid,
+            is_train=False,
+            batch_size=50,
+            workers=num_workers,
+            shuffle=False,
+            transforms=pathmnist_transforms(),
         )
 
         # send model to device
         self.net.to(self.device)
 
         # evaluate
-        loss, accuracy = test(
+        loss, accuracy, auc = test(
             model=self.net,
             criterion=self.criterion,
-            data_flag=valloader.dataset.flag,
+            data_flag=self.data_flag,
             eval_loader=valloader,
-            split="test",
+            split="val",
             device=self.device,
         )
 
         # return statistics
-        return float(loss), len(valloader.dataset), {"accuracy": float(accuracy)}
+        return (
+            float(loss),
+            len(valloader.dataset),
+            {"accuracy": float(accuracy), "auc": auc},
+        )

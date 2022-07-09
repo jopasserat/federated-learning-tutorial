@@ -1,6 +1,6 @@
 from torch import nn
-
-# define a simple CNN model
+from torchvision import transforms
+from torchvision.transforms import Compose
 
 
 class Net(nn.Module):
@@ -50,3 +50,9 @@ class Net(nn.Module):
         x = x.view(x.size(0), -1)
         x = self.fc(x)
         return x
+
+
+def pathmnist_transforms() -> Compose:
+    return transforms.Compose(
+        [transforms.ToTensor(), transforms.Normalize(mean=[0.5], std=[0.5])]
+    )

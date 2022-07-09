@@ -10,7 +10,7 @@ import flwr as fl
 from fl_demo.cnn_pathmnist import Net
 
 
-def get_eval_fn(
+def centralised_eval_fn(
     testset: torch.utils.data.Dataset,
     criterion: torch.nn.Module,
     in_channels: int,
@@ -76,8 +76,9 @@ def test(
             targets = targets.squeeze().long()
             loss += criterion(outputs, targets).item()
 
+            # borrowed from https://github.com/MedMNIST/MedMNIST/blob/main/examples/getting_started.ipynb
+            # TODO make more generic for any model's output
             outputs = outputs.softmax(dim=-1)
-
             targets = targets.float().resize_(len(targets), 1)
 
             y_true = torch.cat((y_true, targets), 0)
@@ -86,7 +87,7 @@ def test(
         y_true = y_true.numpy()
         y_score = y_score.detach().numpy()
 
-        evaluator = Evaluator(data_flag, split)
+        evaluator = Evaluator(data_flag, split, root=eval_loader.dataset.root)
         metrics = evaluator.evaluate(y_score)
 
         auc, acc = metrics

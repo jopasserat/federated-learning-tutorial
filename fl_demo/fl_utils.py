@@ -1,9 +1,14 @@
+import shutil
 from pathlib import Path
+from typing import Callable
+
 import numpy as np
 import torch
-import shutil
-
+from torch.utils.data import DataLoader
+from torchvision.transforms import Compose
 from flwr.dataset.utils.common import create_lda_partitions
+
+from fl_demo.dataset_utils import get_medmnist_data_info
 
 
 def get_random_id_splits(total: int, val_ratio: float, shuffle: bool = True):
@@ -50,6 +55,7 @@ def do_fl_partitioning(
 
     # now save partitioned dataset to disk
     # first delete dir containing splits (if exists), then create it
+    # FIXME refactor not to assume a specific field name
     # splits_dir = path_to_dataset.parent / "federated"
     splits_dir = Path(path_to_dataset.root) / "federated"
     if splits_dir.exists():
@@ -71,14 +77,49 @@ def do_fl_partitioning(
             val_imgs = imgs[val_idx]
             val_labels = labels[val_idx]
 
-            with open(splits_dir / str(p) / "val.pt", "wb") as f:
-                torch.save([val_imgs, val_labels], f)
-
             # remaining images for training
             imgs = imgs[train_idx]
             labels = labels[train_idx]
 
-        with open(splits_dir / str(p) / "train.pt", "wb") as f:
-            torch.save([imgs, labels], f)
+        with open(splits_dir / str(p) / "pathmnist.npz", "wb") as f:
+            d = {
+                "train_images": imgs,
+                "train_labels": labels,
+                "val_images": val_imgs,
+                "val_labels": val_labels,
+            }
+
+            np.savez(f, **d)
 
     return splits_dir
+
+
+def get_federated_dataloader(
+    base_path: Path,
+    client_id: str,
+    is_train: bool,
+    batch_size: int,
+    workers: int,
+    shuffle: bool,
+    transforms: Callable[[], Compose],
+) -> DataLoader:
+    """
+    Generates trainset/valset object and returns appropiate dataloader.
+    This is the federated version.
+    Assumes dataset was already present on disk and partitioned using do_fl_partitioning
+    See dataset_utils for the centralised equivalent
+    """
+
+    split = "train" if is_train else "val"
+
+    path_to_data = base_path / client_id
+    # FIXME pass pathmnist as input param
+    DataClass, _ = get_medmnist_data_info("pathmnist")
+
+    client_dataset = DataClass(
+        root=str(path_to_data), download=False, split=split, transform=transforms
+    )
+
+    # we use as number of workers all the cpu cores assigned to this actor
+    kwargs = {"num_workers": workers, "pin_memory": True, "drop_last": False}
+    return DataLoader(client_dataset, batch_size=batch_size, shuffle=shuffle, **kwargs)
