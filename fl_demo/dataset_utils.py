@@ -50,8 +50,6 @@ def get_dataloader(
     split = "train" if is_train else "test"
     dataset, _ = get_dataset(download=True, split=split)
 
-    # client_dataset = TorchVision_FL(path_to_data, transform=cifar10Transformation())
-
     # we use as number of workers all the cpu cores assigned to this actor
     kwargs = {"num_workers": workers, "pin_memory": True, "drop_last": False}
     return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, **kwargs)
