@@ -20,14 +20,14 @@ class SimulatedFLClient(fl.client.NumPyClient):
     def __init__(
         self,
         cid: str,
-        fed_dir_data: str,
+        fed_data_dir: str,
         in_channels: int,
         num_classes: int,
         criterion: torch.nn.Module,
         data_flag: str,
     ):
         self.cid = cid
-        self.fed_dir = Path(fed_dir_data)
+        self.fed_dir = Path(fed_data_dir)
         self.properties: Dict[str, Scalar] = {"tensor_type": "numpy.ndarray"}
         self.data_flag = data_flag
 

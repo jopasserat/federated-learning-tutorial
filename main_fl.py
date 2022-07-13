@@ -83,7 +83,7 @@ if __name__ == "__main__":
         # create a single client instance
         return SimulatedFLClient(
             cid,
-            fed_dir,
+            fed_data_dir=fed_dir,
             in_channels=n_channels,
             num_classes=n_classes,
             criterion=criterion,
