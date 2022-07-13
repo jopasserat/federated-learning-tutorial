@@ -7,14 +7,11 @@ from medmnist import Evaluator
 import numpy as np
 import flwr as fl
 
-from fl_demo.cnn_pathmnist import Net
-
 
 def centralised_eval_fn(
     testset: torch.utils.data.Dataset,
     criterion: torch.nn.Module,
-    in_channels: int,
-    num_classes: int,
+    model: nn.Module,
 ) -> Callable[[fl.common.Weights], Optional[Tuple[float, float]]]:
     """Return an evaluation function for centralized evaluation."""
 
@@ -24,7 +21,6 @@ def centralised_eval_fn(
         # determine device
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-        model = Net(num_classes=num_classes, in_channels=in_channels)
         set_weights(model, weights)
         model.to(device)
 

@@ -8,9 +8,11 @@ import torch
 import ray
 import numpy as np
 
-from fl_demo.cnn_pathmnist import Net, pathmnist_transforms
+from fl_demo.cnn_pathmnist import pathmnist_transforms
+from fl_demo.debug_utils import exception_message_with_line_number
+from fl_demo.dp_utils import configure_dp_training
 from fl_demo.fl_utils import get_federated_dataloader
-from fl_demo.train_utils import train
+from fl_demo.train_utils import dp_train, train
 from fl_demo.eval_utils import test
 
 
@@ -21,18 +23,24 @@ class SimulatedFLClient(fl.client.NumPyClient):
         self,
         cid: str,
         fed_data_dir: str,
-        in_channels: int,
-        num_classes: int,
+        model: torch.nn.Module,
         criterion: torch.nn.Module,
         data_flag: str,
+        with_dp: bool = False,
+        dp_config: Dict = None,
     ):
         self.cid = cid
         self.fed_dir = Path(fed_data_dir)
         self.properties: Dict[str, Scalar] = {"tensor_type": "numpy.ndarray"}
         self.data_flag = data_flag
 
+        # store DP setting for `train` method
+        self.dp_config = dp_config
+        self.with_dp = with_dp
+
         # instantiate model
-        self.net = Net(in_channels=in_channels, num_classes=num_classes)
+        self.net = model
+
         # FIXME ideally the next 2 fields should not be class members..
         self.optimizer = torch.optim.SGD(self.net.parameters(), lr=0.001, momentum=0.9)
         self.criterion = criterion
@@ -72,18 +80,45 @@ class SimulatedFLClient(fl.client.NumPyClient):
         # send model to device
         self.net.to(self.device)
 
-        # train
-        train(
-            model=self.net,
-            optimizer=self.optimizer,
-            criterion=self.criterion,
-            train_loader=trainloader,
-            NUM_EPOCHS=int(config["epochs"]),
-            device=self.device,
-        )
+        # enable and configure DP if needed
+        dp_stats = {}
+
+        if self.with_dp:
+            (
+                self.net,
+                self.optimizer,
+                trainloader,
+                privacy_engine,
+            ) = configure_dp_training(
+                dp_config=self.dp_config,
+                model=self.net,
+                optimizer=self.optimizer,
+                train_loader=trainloader,
+            )
+            dp_stats = dp_train(
+                model=self.net,
+                optimizer=self.optimizer,
+                criterion=self.criterion,
+                train_loader=trainloader,
+                NUM_EPOCHS=int(config["epochs"]),
+                device=self.device,
+                privacy_engine=privacy_engine,
+                dp_config=self.dp_config,
+            )
+        # non-private train
+        else:
+            train(
+                model=self.net,
+                optimizer=self.optimizer,
+                criterion=self.criterion,
+                train_loader=trainloader,
+                NUM_EPOCHS=int(config["epochs"]),
+                device=self.device,
+            )
+
 
         # return local model and statistics
-        return self.get_parameters(), len(trainloader.dataset), {}
+        return self.get_parameters(), len(trainloader.dataset), dp_stats
 
     def evaluate(self, parameters, config):
 
