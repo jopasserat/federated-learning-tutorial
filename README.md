@@ -19,6 +19,17 @@ conda create --name my_project_env --file conda-linux-64.lock
 poetry install
 ```
 
+### Updating the environment
+
+```
+# Re-generate Conda lock file(s) based on environment.yml
+conda-lock -k explicit --conda mamba
+# Update Conda packages based on re-generated lock file
+mamba update --file conda-linux-64.lock
+# Update Poetry packages and re-generate poetry.lock
+poetry update
+```
+
 ## How to run
 
 This example:

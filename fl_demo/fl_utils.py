@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Callable
 
 import numpy as np
-import torch
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose
 from flwr.dataset.utils.common import create_lda_partitions

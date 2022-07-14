@@ -4,7 +4,9 @@ from typing import Dict
 import flwr as fl
 import torch
 
+from fl_demo.cnn_pathmnist import Net
 from fl_demo.dataset_utils import get_dataset
+from fl_demo.dp_utils import fix_model_layers
 from fl_demo.fl_utils import do_fl_partitioning
 from fl_demo.FLClient import SimulatedFLClient
 from fl_demo.eval_utils import centralised_eval_fn
@@ -37,6 +39,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--num_client_cpus", type=int, default=1)
     parser.add_argument("--num_rounds", type=int, default=2)
+    parser.add_argument("--train_with_dp", action="store_true", default=True)
 
     args = parser.parse_args()
 
@@ -44,6 +47,13 @@ if __name__ == "__main__":
     client_resources = {
         "num_cpus": args.num_client_cpus
     }  # each client will get allocated 1 CPUs
+    dp_config = {
+        "max_per_sample_grad_norm": 10.0,
+        "noise_multiplier": 1.5,  # sigma
+        "secure_rng": False,
+        "delta": 1e-5,
+        "clip_per_layer": False,
+    }
 
     ### download  dataset ###
     trainset, info = get_dataset(split="train")
@@ -53,6 +63,9 @@ if __name__ == "__main__":
     n_channels = info["n_channels"]
 
     criterion = torch.nn.CrossEntropyLoss()
+
+    model = Net(num_classes=n_classes, in_channels=n_channels)
+    model = fix_model_layers(model) if args.train_with_dp else model
 
     # TODO expose alpha param
     # partition dataset (use a large `alpha` to make it IID;
@@ -75,7 +88,9 @@ if __name__ == "__main__":
         min_available_clients=pool_size,  # All clients should be available
         on_fit_config_fn=fit_config,
         eval_fn=centralised_eval_fn(
-            testset, criterion=criterion, in_channels=n_channels, num_classes=n_classes
+            testset,
+            model=model,
+            criterion=criterion
         ),  # centralised testset evaluation of global model
     )
 
@@ -83,11 +98,12 @@ if __name__ == "__main__":
         # create a single client instance
         return SimulatedFLClient(
             cid,
-            fed_dir,
-            in_channels=n_channels,
-            num_classes=n_classes,
+            fed_data_dir=fed_dir,
+            model=model,
             criterion=criterion,
             data_flag=trainset.flag,
+            with_dp=args.train_with_dp,
+            dp_config=dp_config,
         )
 
     # (optional) specify ray config, set local_mode to true for serial debugging
